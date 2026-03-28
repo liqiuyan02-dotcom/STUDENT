@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小朋友学概率：面积和数量</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Comic Sans MS", "微软雅黑", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        .title {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 36px;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 游戏卡片通用样式 */
+        .game-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            text-align: center;
+            width: 400px;
+        }
+
+        .game-title {
+            font-size: 24px;
+            margin-bottom: 25px;
+        }
+
+        /* ================= 转盘区域 ================= */
+        .wheel-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 0 auto 30px;
+        }
+
+        /* 指针（固定在正上方） */
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 35px solid #ff4757;
+            z-index: 10;
+            filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 6px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            position: relative;
+            /* 背景渐变由JS动态生成 */
+        }
+
+        .wheel-text-layer {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+
+        .wheel-text-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+            /* transform 由JS动态生成 */
+        }
+
+        /* ================= 抽奖箱区域 ================= */
+        .box-wrapper {
+            position: relative;
+            width: 280px;
+            margin: 0 auto 50px; /* 底部留出托盘空间 */
+        }
+
+        /* 透明玻璃正方体 */
+        .lottery-box {
+            width: 280px;
+            height: 280px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            backdrop-filter: blur(4px);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 底部托盘 */
+        .tray {
+            width: 160px;
+            height: 15px;
+            background: #dfe6e9;
+            border-radius: 10px;
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .ball {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.2), 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); /* 带有弹性的掉落曲线 */
+            z-index: 3;
+        }
+
+        /* ================= 通用按钮与统计 ================= */
+        .btn {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-wheel { background: #ff6b6b; }
+        .btn-wheel:hover { background: #ff5252; }
+        .btn-box { background: #4ecdc4; }
+        .btn-box:hover { background: #45b7af; }
+
+        .stats {
+            margin-top: 25px;
+            text-align: left;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px dashed #ccc;
+        }
+
+        .stats h3 {
+            color: #555;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .stats p {
+            font-size: 18px;
+            margin: 8px 0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .color-dot {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .tip {
+            max-width: 880px;
+            margin: 40px auto;
+            padding: 25px;
+            background: #e3f2fd;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 20px;
+            color: #1976d2;
+            line-height: 1.8;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* ================= 彩虹桥区域 ================= */
+        .rainbow-bridge {
+            max-width: 880px;
+            margin: 30px auto;
+            padding: 30px;
+            background: linear-gradient(135deg, #fff5f5 0%, #f0fff4 100%);
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .rainbow-title {
+            font-size: 26px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+
+        .rainbow-track {
+            width: 100%;
+            height: 60px;
+            background: #e8e8e8;
+            border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .rainbow-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d, #4ecdc4, #a29bfe);
+            border-radius: 30px;
+            transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .rainbow-fill::after {
+            content: '⭐';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 30px;
+            animation: starPulse 1s infinite;
+        }
+
+        @keyframes starPulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.2); }
+        }
+
+        .progress-text {
+            font-size: 18px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .stars-container {
+            margin-top: 20px;
+            font-size: 40px;
+            min-height: 50px;
+        }
+
+        .star {
+            display: inline-block;
+            animation: starPop 0.5s ease-out;
+            margin: 0 5px;
+        }
+
+        @keyframes starPop {
+            0% { transform: scale(0) rotate(0deg); }
+            50% { transform: scale(1.3) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+
+        /* ================= 小精灵区域 ================= */
+        .fairy-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+        }
+
+        .fairy-bubble {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 20px;
+            border-bottom-right-radius: 5px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            max-width: 250px;
+            font-size: 16px;
+            color: #333;
+            line-height: 1.5;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .fairy-bubble.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .fairy {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+            animation: fairyFloat 2s ease-in-out infinite;
+            transition: transform 0.3s;
+        }
+
+        .fairy:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes fairyFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .fairy-wings {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            animation: wingFlap 0.3s infinite alternate;
+        }
+
+        @keyframes wingFlap {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0.8); }
+        }
+
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confettiFall 3s ease-out forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">🎯 小朋友学概率：面积和数量</h1>
+
+    <div class="container">
+        <div class="game-card">
+            <h2 class="game-title" style="color: #ff6b6b;">🌈 彩色大转盘</h2>
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <div class="wheel" id="wheel">
+                    <div class="wheel-text-layer" id="wheelText"></div>
+                </div>
+            </div>
+            <button class="btn btn-wheel" id="spinBtn">点击转转盘</button>
+            <div class="stats">
+                <h3>📊 转盘统计</h3>
+                <p><span class="color-dot" style="background:#ff6b6b"></span>红色（180°）：<span id="r1">0</span> 次</p>
+                <p><span class="color-dot" style="background:#4ecdc4"></span>蓝色（随机）：<span id="r2">0</span> 次</p>
+                <p><span class="color-dot" style="background:#ffd93d"></span>黄色（随机）：<span id="r3">0</span> 次</p>
+            </div>
+        </div>
+
+        <div class="game-card">
+            <h2 class="game-title" style="color: #4ecdc4;">🎁 透明抽奖箱</h2>
+            <div class="box-wrapper">
+                <div class="lottery-box" id="lotteryBox"></div>
+                <div class="tray"></div>
+            </div>
+            <button class="btn btn-box" id="drawBtn">点击抽球</button>
+            <div class="stats">
+                <h3>📊 抽球统计</h3>
+                <p><span class="color-dot" style="background:#ff6b6b"></span>红球（5个）：<span id="b1">0</span> 次</p>
+                <p><span class="color-dot" style="background:#4ecdc4"></span>蓝球（10个）：<span id="b2">0</span> 次</p>
+                <p><span class="color-dot" style="background:#ffd93d"></span>黄球（20个）：<span id="b3">0</span> 次</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彩虹桥进度区域 -->
+    <div class="rainbow-bridge">
+        <div class="rainbow-title">🌈 魔法彩虹桥</div>
+        <div class="rainbow-track">
+            <div class="rainbow-fill" id="rainbowFill"></div>
+        </div>
+        <div class="progress-text">
+            已玩游戏：<span id="totalGames">0</span> 次 | 
+            目标：<span id="targetGames">10</span> 次
+        </div>
+        <div class="stars-container" id="starsContainer"></div>
+    </div>
+
+    <div class="tip">
+        💡 <b>小朋友发现了吗？</b><br>
+        1. 转盘里 <span style="color:#ff6b6b; font-size:24px; font-weight:bold;">红色面积最大</span>，所以指针指到红色的次数最多！<br>
+        2. 抽奖箱里 <span style="color:#f39c12; font-size:24px; font-weight:bold;">黄球数量最多</span>，所以抽到黄球的次数最多！<br>
+        ✨ <b>结论：面积越大 / 数量越多，发生的"概率"就越大！</b>
+    </div>
+
+    <!-- 小精灵 -->
+    <div class="fairy-container">
+        <div class="fairy-bubble" id="fairyBubble">你好呀！我是概率小精灵，快来和我一起玩吧！🎮</div>
+        <div class="fairy" id="fairy" onclick="fairySpeak()">🧚‍♀️</div>
+    </div>
+
+    <!-- 庆祝动画容器 -->
+    <div class="celebration" id="celebration"></div>
+
+    <script>
+        // ==================== 小精灵和彩虹桥系统 ====================
+        let totalGames = 0;
+        const targetGames = 10;
+        let starsEarned = 0;
+        
+        const fairyMessages = {
+            start: [
+                "你好呀！我是概率小精灵，快来和我一起玩吧！🎮",
+                "欢迎来到概率王国！准备好学习了吗？📚",
+                "嗨！小朋友，让我们一起探索概率的奥秘吧！✨"
+            ],
+            wheel: {
+                red: ["哇！红色！就像太阳一样耀眼！☀️", "太棒了！红色出现啦！🔴", "红色胜利！概率大师就是你！🏆"],
+                blue: ["蓝色！像大海一样神秘！🌊", "哇哦！蓝色出现了！🔵", "蓝色的概率也很棒哦！💙"],
+                yellow: ["黄色！像小星星一样闪亮！⭐", "黄色出现啦！虽然面积小，但也有机会哦！🟡", "黄色！概率虽小，但你很幸运！🌟"]
+            },
+            box: {
+                red: ["红球！数量少但被你抽到了！运气真好！🎯", "哇！稀有的红球！你是幸运儿！🎪", "红球出现！概率小但有可能！🔴"],
+                blue: ["蓝球！数量中等，很常见哦！🔵", "蓝色小球！概率刚刚好！💙", "蓝球！不多不少，正好！✨"],
+                yellow: ["黄球！数量最多，最容易抽到！🟡", "黄色！概率最大的颜色！⭐", "黄球出现！数量多概率大！💛"]
+            },
+            milestone: ["太厉害了！你已经玩了{count}次！继续加油！🎉", "哇！{count}次了！你是概率小达人！🏆", "好棒！{count}次游戏！彩虹桥越来越亮啦！🌈"],
+            complete: ["恭喜你！完成了所有挑战！你已经是概率大师啦！👑", "太棒了！10次挑战完成！送你一颗大星星！⭐", "哇！你完成了！概率王国为你骄傲！🏰"]
+        };
+
+        function showFairyBubble(message, duration = 3000) {
+            const bubble = document.getElementById('fairyBubble');
+            bubble.textContent = message;
+            bubble.classList.add('show');
+            
+            setTimeout(() => {
+                bubble.classList.remove('show');
+            }, duration);
+        }
+
+        function fairySpeak() {
+            const randomMsg = fairyMessages.start[Math.floor(Math.random() * fairyMessages.start.length)];
+            showFairyBubble(randomMsg);
+        }
+
+        function updateRainbowBridge() {
+            totalGames++;
+            const progress = Math.min((totalGames / targetGames) * 100, 100);
+            document.getElementById('rainbowFill').style.width = progress + '%';
+            document.getElementById('totalGames').textContent = totalGames;
+            
+            // 每2次游戏获得一颗星星
+            if (totalGames % 2 === 0 && starsEarned < 5) {
+                starsEarned++;
+                const star = document.createElement('span');
+                star.className = 'star';
+                star.textContent = '⭐';
+                document.getElementById('starsContainer').appendChild(star);
+                
+                // 播放星星获得音效（视觉反馈）
+                showFairyBubble("获得一颗星星！继续加油！⭐");
+            }
+            
+            // 里程碑提示
+            if (totalGames === 3 || totalGames === 5 || totalGames === 7) {
+                const msg = fairyMessages.milestone[Math.floor(Math.random() * fairyMessages.milestone.length)]
+                    .replace('{count}', totalGames);
+                setTimeout(() => showFairyBubble(msg), 1000);
+            }
+            
+            // 完成所有挑战
+            if (totalGames === targetGames) {
+                setTimeout(() => {
+                    const msg = fairyMessages.complete[Math.floor(Math.random() * fairyMessages.complete.length)];
+                    showFairyBubble(msg, 5000);
+                    createConfetti();
+                }, 1500);
+            }
+        }
+
+        function createConfetti() {
+            const celebration = document.getElementById('celebration');
+            const colors = ['#ff6b6b', '#4ecdc4', '#ffd93d', '#a29bfe', '#fd79a8'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    celebration.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 50);
+            }
+        }
+
+        // 页面加载后显示欢迎消息
+        setTimeout(() => {
+            fairySpeak();
+        }, 1000);
+
+        // ==================== 转盘逻辑：随机分区 + 精准碰撞检测 ====================
+        const wheel = document.getElementById('wheel');
+        const wheelText = document.getElementById('wheelText');
+        const spinBtn = document.getElementById('spinBtn');
+        
+        // 生成随机角度：红色固定180，蓝色50~129，黄色剩余
+        const blueDeg = Math.floor(Math.random() * 80) + 50; 
+        const yellowDeg = 180 - blueDeg;
+
+        // 使用 conic-gradient 绘制完美饼图
+        // Red: 0-180 | Blue: 180-(180+blueDeg) | Yellow: (180+blueDeg)-360
+        wheel.style.background = `conic-gradient(
+            #ff6b6b 0deg 180deg,
+            #4ecdc4 180deg ${180 + blueDeg}deg,
+            #ffd93d ${180 + blueDeg}deg 360deg
+        )`;
+
+        // 放置文字：让文字恰好处于每个扇形的角平分线上
+        const textData = [
+            { text: '红色', color: 'white', angle: 90 }, // 0到180的中间是90度
+            { text: '蓝色', color: 'white', angle: 180 + blueDeg / 2 },
+            { text: '黄色', color: '#d35400', angle: 360 - yellowDeg / 2 } // 黄色底配深色字
+        ];
+
+        let htmlStr = '';
+        textData.forEach(item => {
+            // CSS rotate() 的 0 度正上方。先旋转到扇形中心角，再向上推移即可居中
+            htmlStr += `<div class="wheel-text-label" 
+                style="transform: translate(-50%, -50%) rotate(${item.angle}deg) translateY(-85px); color: ${item.color};">
+                ${item.text}</div>`;
+        });
+        wheelText.innerHTML = htmlStr;
+
+        let currentRot = 0;
+        let isSpinning = false;
+        let redCnt=0, blueCnt=0, yellowCnt=0;
+
+        spinBtn.onclick = () => {
+            if(isSpinning) return;
+            isSpinning = true;
+            spinBtn.innerText = "转动中...";
+
+            // 随机旋转时长 2~5秒 (2000ms ~ 5000ms)
+            const spinTime = Math.random() * 3000 + 2000;
+            // 随机旋转度数：保底转 5 圈 (1800度) + 额外的随机度数
+            const extraDeg = Math.random() * 360 + 1800;
+            currentRot += extraDeg;
+
+            // 赋予动画
+            wheel.style.transition = `transform ${spinTime}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
+            wheel.style.transform = `rotate(${currentRot}deg)`;
+
+            // 等待旋转停止后计算结果
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.innerText = "点击转转盘";
+
+                // 计算指针（0度位置）最终落在了原本轮盘的哪个角度
+                const normalizedRot = currentRot % 360; 
+                const pointerAngle = (360 - normalizedRot) % 360;
+
+                // 精准判断颜色
+                let resultColor = '';
+                if(pointerAngle >= 0 && pointerAngle < 180){
+                    redCnt++; document.getElementById('r1').textContent = redCnt;
+                    resultColor = 'red';
+                } else if(pointerAngle >= 180 && pointerAngle < 180 + blueDeg){
+                    blueCnt++; document.getElementById('r2').textContent = blueCnt;
+                    resultColor = 'blue';
+                } else {
+                    yellowCnt++; document.getElementById('r3').textContent = yellowCnt;
+                    resultColor = 'yellow';
+                }
+                
+                // 小精灵评论
+                const messages = fairyMessages.wheel[resultColor];
+                const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+                showFairyBubble(randomMsg);
+                
+                // 更新彩虹桥
+                updateRainbowBridge();
+            }, spinTime);
+        };
+
+        // ==================== 抽奖箱逻辑：严格数量 + 托盘掉落 ====================
+        const box = document.getElementById('lotteryBox');
+        const drawBtn = document.getElementById('drawBtn');
+        
+        // 严格按照数量：红5 蓝10 黄20，共35个
+        const ballTypes = [
+            ...Array(5).fill('red'),
+            ...Array(10).fill('blue'),
+            ...Array(20).fill('yellow')
+        ];
+        const colors = { red:'#ff6b6b', blue:'#4ecdc4', yellow:'#ffd93d' };
+        
+        let allBalls = [];
+        let rBox=0, bBox=0, yBox=0;
+        let isDrawn = false;
+        let currentBall = null;
+
+        // 初始化箱子里的球
+        function initBox() {
+            box.innerHTML = '';
+            allBalls = [];
+            ballTypes.forEach(type => {
+                const b = document.createElement('div');
+                b.className = 'ball';
+                b.style.backgroundColor = colors[type];
+                
+                // 将球随机散布在箱子内部（箱子280x280，球24x24，留出安全边距）
+                const leftPos = Math.random() * (280 - 30) + 5;
+                const topPos = Math.random() * (280 - 30) + 5;
+                
+                b.style.left = leftPos + 'px';
+                b.style.top = topPos + 'px';
+                
+                // 记录原始位置以便“归位”
+                b.dataset.origLeft = leftPos;
+                b.dataset.origTop = topPos;
+                b.dataset.type = type;
+                
+                box.appendChild(b);
+                allBalls.push(b);
+            });
+        }
+        initBox();
+
+        drawBtn.onclick = () => {
+            if (isDrawn) {
+                // 【第二次点击】：仅让球归位，恢复原状。
+                // 注意：这里不清除数据，否则小朋友看不出累计概率！
+                currentBall.style.transition = 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                currentBall.style.left = currentBall.dataset.origLeft + 'px';
+                currentBall.style.top = currentBall.dataset.origTop + 'px';
+                currentBall.style.zIndex = 3;
+                
+                setTimeout(() => {
+                    drawBtn.textContent = '点击抽球';
+                    drawBtn.style.background = '#4ecdc4';
+                    isDrawn = false;
+                }, 700);
+            } else {
+                // 【第一次点击】：随机抽取一个球，先滚动再掉落到托盘
+                drawBtn.textContent = '抽取中...';
+                drawBtn.style.background = '#95a5a6';
+                
+                // 让所有球先随机滚动一下
+                allBalls.forEach(ball => {
+                    ball.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    const randomLeft = Math.random() * (280 - 30) + 5;
+                    const randomTop = Math.random() * (280 - 30) + 5;
+                    ball.style.left = randomLeft + 'px';
+                    ball.style.top = randomTop + 'px';
+                });
+
+                // 延迟后选择一个球并掉落
+                setTimeout(() => {
+                    const randomIdx = Math.floor(Math.random() * allBalls.length);
+                    currentBall = allBalls[randomIdx];
+
+                    // 提升层级并移动到托盘中央位置 (托盘的Y轴位置大概在 300px 处)
+                    currentBall.style.zIndex = 10;
+                    currentBall.style.transition = 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    currentBall.style.left = '128px'; // (280/2 - 12) 居中
+                    currentBall.style.top = '295px';  // 掉落到托盘上
+
+                    // 更新统计数据
+                    const t = currentBall.dataset.type;
+                    if(t === 'red') { rBox++; document.getElementById('b1').textContent = rBox; }
+                    if(t === 'blue') { bBox++; document.getElementById('b2').textContent = bBox; }
+                    if(t === 'yellow') { yBox++; document.getElementById('b3').textContent = yBox; }
+
+                    // 小精灵评论
+                    const messages = fairyMessages.box[t];
+                    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+                    showFairyBubble(randomMsg);
+                    
+                    // 更新彩虹桥
+                    updateRainbowBridge();
+
+                    drawBtn.textContent = '将球放回箱子';
+                    drawBtn.style.background = '#f39c12';
+                    isDrawn = true;
+                }, 600);
+            }
+        };
+    </script>
+</body>
+</html>
